@@ -1,0 +1,19 @@
+{
+  "league": "Fantasy Baseball League",
+  "season": "2025",
+  "team_count": 12,
+  "teams": [
+    {"team_name": "Will's Wild Team", "player_count": 26},
+    {"team_name": "Wander Franco U15 Travel Team", "player_count": 26},
+    {"team_name": "kyle's Top-Notch Team", "player_count": 28},
+    {"team_name": "Battlin Buccos", "player_count": 26},
+    {"team_name": "Yamamotorboaters", "player_count": 26},
+    {"team_name": "I hate the Phillies", "player_count": 26},
+    {"team_name": "Jake's Scary Team", "player_count": 28},
+    {"team_name": "Maggie Will Smith", "player_count": 28},
+    {"team_name": "Graham's Great Team", "player_count": 26},
+    {"team_name": "Dongle", "player_count": 26},
+    {"team_name": "Woo-hoo!", "player_count": 26},
+    {"team_name": "Boston Black Sox", "player_count": 28}
+  ]
+}

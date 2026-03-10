@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Nationalities — Fantasy League HQ</title>
+<link rel="stylesheet" href="/css/main.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* ---- Page-specific overrides ---- */
+  .section-header {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .section-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(196,113,59,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ---- Stat counter animation ---- */
+  .stat-item .num {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .stat-item:hover .num {
+    transform: scale(1.08);
+    color: var(--accent-warm);
+  }
+
+  /* ---- Chart cards ---- */
+  .team-name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--transition-fast);
+  }
+
+  .card:hover .team-name { color: var(--accent-warm); }
+
+  .team-count {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto 20px;
+    aspect-ratio: 1;
+    transition: transform var(--transition);
+  }
+
+  .card:hover .chart-container { transform: scale(1.03); }
+
+  /* ---- Legend ---- */
+  .legend-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+  }
+
+  .legend-item:hover { color: var(--text-primary); }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: transform var(--transition-fast);
+  }
+
+  .legend-item:hover .legend-dot { transform: scale(1.3); }
+
+  .legend-count {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  .card canvas { cursor: pointer; }
+
+  /* ---- Modal detail styles ---- */
+  .modal-country {
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: modalItemIn 0.4s ease forwards;
+  }
+
+  .modal-country:nth-child(1) { animation-delay: 0.05s; }
+  .modal-country:nth-child(2) { animation-delay: 0.1s; }
+  .modal-country:nth-child(3) { animation-delay: 0.15s; }
+  .modal-country:nth-child(4) { animation-delay: 0.2s; }
+  .modal-country:nth-child(5) { animation-delay: 0.25s; }
+  .modal-country:nth-child(6) { animation-delay: 0.3s; }
+  .modal-country:nth-child(7) { animation-delay: 0.35s; }
+  .modal-country:nth-child(8) { animation-delay: 0.4s; }
+
+  @keyframes modalItemIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-country-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .modal-country-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .modal-country-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-primary);
+  }
+
+  .modal-country-count {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .modal-player {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-secondary);
+    padding: 5px 0 5px 20px;
+    position: relative;
+    transition: color var(--transition-fast);
+  }
+
+  .modal-player:hover { color: var(--text-primary); }
+
+  .modal-player::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--border-dark);
+  }
+
+  .modal-player .pos {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  /* ---- League-wide bar at bottom ---- */
+  .league-bar-section {
+    padding: 0 0 80px;
+  }
+
+  .league-bar-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+    text-align: center;
+    margin-bottom: 32px;
+    color: var(--text-primary);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-slow);
+  }
+
+  .league-bar-title.visible { opacity: 1; transform: translateY(0); }
+  .league-bar-title em { font-style: italic; color: var(--accent-warm); }
+
+  .league-bars {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-slow);
+  }
+
+  .league-bars.visible { opacity: 1; transform: translateY(0); transition-delay: 0.15s; }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 40px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .bar-label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: right;
+  }
+
+  .bar-track {
+    height: 28px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    width: 0;
+    transition: width 1.2s cubic-bezier(0.25,0.46,0.45,0.94);
+    position: relative;
+  }
+
+  .bar-fill.animate { /* width set via JS */ }
+
+  .bar-value {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 768px) {
+    .bar-row { grid-template-columns: 100px 1fr 36px; gap: 10px; }
+    .bar-label { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="/" class="nav-brand"><span class="dot"></span> Fantasy League HQ</a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/nationalities" class="active">Nationalities</a></li>
+  </ul>
+</nav>
+
+<main class="page-content">
+  <div class="section-header">
+    <div class="section-rule"></div>
+    <h1>Player <span>Nationality</span> Breakdown</h1>
+    <p>Birth country for every rostered player across the league</p>
+    <div class="stat-row" id="leagueStats"></div>
+  </div>
+
+  <div class="container">
+    <div class="card-grid" id="grid"></div>
+  </div>
+
+  <div class="container league-bar-section">
+    <div class="league-bar-title" id="barTitle">League-wide <em>totals</em></div>
+    <div class="league-bars" id="leagueBars"></div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <h2 id="modalTitle"></h2>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <p>Fantasy League HQ · Data via MLB Stats API</p>
+</footer>
+
+<script>
+// ============================================================
+// TEAM DATA
+// ============================================================
+const TEAMS=[{name:"Will's Wild Team",players:[{n:"Adley Rutschman",pos:"C",c:"USA"},{n:"Pete Alonso",pos:"1B",c:"USA"},{n:"Jose Altuve",pos:"2B",c:"Venezuela"},{n:"Matt Chapman",pos:"3B",c:"USA"},{n:"Mookie Betts",pos:"SS",c:"USA"},{n:"Kyle Tucker",pos:"OF",c:"USA"},{n:"Byron Buxton",pos:"OF",c:"USA"},{n:"Andy Pages",pos:"OF",c:"Cuba"},{n:"Freddie Freeman",pos:"1B",c:"USA"},{n:"Jeremy Pena",pos:"SS",c:"Dominican Republic"},{n:"Jo Adell",pos:"OF",c:"USA"},{n:"Dylan Crews",pos:"OF",c:"USA"},{n:"Isaac Paredes",pos:"3B",c:"Mexico"},{n:"Jordan Lawlar",pos:"3B",c:"USA"},{n:"Anthony Volpe",pos:"SS",c:"USA"},{n:"Starling Marte",pos:"DH",c:"Dominican Republic"},{n:"Ryan Jeffers",pos:"C",c:"USA"},{n:"Tarik Skubal",pos:"SP",c:"USA"},{n:"Chris Sale",pos:"SP",c:"USA"},{n:"Jacob deGrom",pos:"SP",c:"USA"},{n:"Blake Snell",pos:"SP",c:"USA"},{n:"Ryan Pepiot",pos:"SP",c:"USA"},{n:"Kris Bubic",pos:"SP",c:"USA"},{n:"Carlos Rodon",pos:"SP",c:"USA"},{n:"Shane Baz",pos:"SP",c:"USA"},{n:"Casey Mize",pos:"SP",c:"USA"}]},{name:"Wander Franco U15 Travel Team",players:[{n:"Drake Baldwin",pos:"C",c:"USA"},{n:"Josh Naylor",pos:"1B",c:"Canada"},{n:"Ketel Marte",pos:"2B",c:"Dominican Republic"},{n:"Jose Ramirez",pos:"3B",c:"Dominican Republic"},{n:"Gunnar Henderson",pos:"SS",c:"USA"},{n:"Tyler Soderstrom",pos:"OF",c:"USA"},{n:"Lawrence Butler",pos:"OF",c:"USA"},{n:"Steven Kwan",pos:"OF",c:"USA"},{n:"Brandon Lowe",pos:"2B",c:"USA"},{n:"Addison Barger",pos:"3B",c:"USA"},{n:"Jakob Marsee",pos:"OF",c:"USA"},{n:"Willson Contreras",pos:"1B",c:"Venezuela"},{n:"Kerry Carpenter",pos:"OF",c:"USA"},{n:"Kyle Teel",pos:"C",c:"USA"},{n:"Noelvi Marte",pos:"OF",c:"Dominican Republic"},{n:"Ezequiel Tovar",pos:"SS",c:"Venezuela"},{n:"Colt Emerson",pos:"SS",c:"USA"},{n:"Freddy Peralta",pos:"SP",c:"Dominican Republic"},{n:"Kyle Bradish",pos:"SP",c:"USA"},{n:"Nick Lodolo",pos:"SP",c:"USA"},{n:"Emmet Sheehan",pos:"SP",c:"USA"},{n:"Trevor Rogers",pos:"SP",c:"USA"},{n:"Adrian Morejon",pos:"RP",c:"Cuba"},{n:"Tyler Rogers",pos:"RP",c:"USA"},{n:"Shane McClanahan",pos:"SP",c:"USA"},{n:"Braxton Ashcraft",pos:"SP",c:"USA"}]},{name:"kyle's Top-Notch Team",players:[{n:"Agustin Ramirez",pos:"C",c:"Dominican Republic"},{n:"Jonathan Aranda",pos:"1B",c:"Mexico"},{n:"Matt McLain",pos:"2B",c:"USA"},{n:"Royce Lewis",pos:"3B",c:"USA"},{n:"Zach Neto",pos:"SS",c:"USA"},{n:"Ronald Acuna Jr.",pos:"OF",c:"Venezuela"},{n:"Fernando Tatis Jr.",pos:"OF",c:"Dominican Republic"},{n:"Wyatt Langford",pos:"OF",c:"USA"},{n:"Ozzie Albies",pos:"2B",c:"Curacao"},{n:"Sal Stewart",pos:"1B",c:"USA"},{n:"Kevin McGonigle",pos:"SS",c:"USA"},{n:"Alec Burleson",pos:"OF",c:"USA"},{n:"Carter Jensen",pos:"C",c:"USA"},{n:"Jesus Made",pos:"SS",c:"Dominican Republic"},{n:"Daylen Lile",pos:"OF",c:"USA"},{n:"Ivan Herrera",pos:"DH",c:"Panama"},{n:"Jordan Westburg",pos:"3B",c:"USA"},{n:"Eury Perez",pos:"SP",c:"Dominican Republic"},{n:"Nolan McLean",pos:"SP",c:"USA"},{n:"Bubba Chandler",pos:"SP",c:"USA"},{n:"Devin Williams",pos:"RP",c:"USA"},{n:"Jeff Hoffman",pos:"RP",c:"USA"},{n:"Kyle Harrison",pos:"SP",c:"USA"},{n:"Mike Burrows",pos:"SP",c:"USA"},{n:"Ryan Sloan",pos:"SP",c:"USA"},{n:"Grant Taylor",pos:"RP",c:"USA"},{n:"Mick Abel",pos:"SP",c:"USA"},{n:"Hunter Greene",pos:"SP",c:"USA"}]},{name:"Battlin Buccos",players:[{n:"Alejandro Kirk",pos:"C",c:"Mexico"},{n:"Matt Olson",pos:"1B",c:"USA"},{n:"Nico Hoerner",pos:"2B",c:"USA"},{n:"Eugenio Suarez",pos:"3B",c:"Venezuela"},{n:"Trea Turner",pos:"SS",c:"USA"},{n:"Brent Rooker",pos:"DH",c:"USA"},{n:"George Springer",pos:"OF",c:"USA"},{n:"Teoscar Hernandez",pos:"OF",c:"Dominican Republic"},{n:"Yandy Diaz",pos:"DH",c:"Cuba"},{n:"Colson Montgomery",pos:"SS",c:"USA"},{n:"Bryan Reynolds",pos:"OF",c:"USA"},{n:"Xander Bogaerts",pos:"SS",c:"Aruba"},{n:"Dillon Dingler",pos:"C",c:"USA"},{n:"Endy Rodriguez",pos:"1B",c:"Dominican Republic"},{n:"Shohei Ohtani",pos:"SP",c:"Japan"},{n:"Cristopher Sanchez",pos:"SP",c:"Dominican Republic"},{n:"Jhoan Duran",pos:"RP",c:"Dominican Republic"},{n:"Dylan Cease",pos:"SP",c:"USA"},{n:"David Bednar",pos:"RP",c:"USA"},{n:"Aroldis Chapman",pos:"RP",c:"Cuba"},{n:"Luis Castillo",pos:"SP",c:"Dominican Republic"},{n:"Tyler Glasnow",pos:"SP",c:"USA"},{n:"Nathan Eovaldi",pos:"SP",c:"USA"},{n:"Sonny Gray",pos:"SP",c:"USA"},{n:"Dennis Santana",pos:"RP",c:"Dominican Republic"},{n:"Joe Musgrove",pos:"SP",c:"USA"}]},{name:"Yamamotorboaters",players:[{n:"Cal Raleigh",pos:"C",c:"USA"},{n:"Spencer Torkelson",pos:"1B",c:"USA"},{n:"Jackson Holliday",pos:"2B",c:"USA"},{n:"Manny Machado",pos:"3B",c:"USA"},{n:"CJ Abrams",pos:"SS",c:"USA"},{n:"Juan Soto",pos:"OF",c:"Dominican Republic"},{n:"Randy Arozarena",pos:"OF",c:"Cuba"},{n:"Jasson Dominguez",pos:"OF",c:"Dominican Republic"},{n:"Munetaka Murakami",pos:"3B",c:"Japan"},{n:"Gleyber Torres",pos:"2B",c:"Venezuela"},{n:"Masyn Winn",pos:"SS",c:"USA"},{n:"Ian Happ",pos:"OF",c:"USA"},{n:"Kyle Manzardo",pos:"DH",c:"USA"},{n:"Alec Bohm",pos:"3B",c:"USA"},{n:"Jung Hoo Lee",pos:"OF",c:"South Korea"},{n:"Jonathan India",pos:"2B",c:"USA"},{n:"Yoshinobu Yamamoto",pos:"SP",c:"Japan"},{n:"Joe Ryan",pos:"SP",c:"USA"},{n:"Spencer Strider",pos:"SP",c:"USA"},{n:"Tanner Bibee",pos:"SP",c:"USA"},{n:"Roki Sasaki",pos:"SP",c:"Japan"},{n:"Daniel Palencia",pos:"RP",c:"Dominican Republic"},{n:"Will Vest",pos:"RP",c:"USA"},{n:"Edward Cabrera",pos:"SP",c:"Dominican Republic"},{n:"Logan Henderson",pos:"SP",c:"USA"},{n:"AJ Smith-Shawver",pos:"SP",c:"USA"}]},{name:"I hate the Phillies",players:[{n:"Shea Langeliers",pos:"C",c:"USA"},{n:"Vinnie Pasquantino",pos:"1B",c:"USA"},{n:"Jazz Chisholm Jr.",pos:"2B",c:"Bahamas"},{n:"Alex Bregman",pos:"3B",c:"USA"},{n:"Elly De La Cruz",pos:"SS",c:"Dominican Republic"},{n:"Jackson Chourio",pos:"OF",c:"Venezuela"},{n:"Jurickson Profar",pos:"OF",c:"Curacao"},{n:"Brenton Doyle",pos:"OF",c:"USA"},{n:"Jacob Wilson",pos:"SS",c:"USA"},{n:"Taylor Ward",pos:"OF",c:"USA"},{n:"Heliot Ramos",pos:"OF",c:"Puerto Rico"},{n:"Xavier Edwards",pos:"2B",c:"USA"},{n:"Yainer Diaz",pos:"C",c:"Dominican Republic"},{n:"Brendan Donovan",pos:"2B",c:"USA"},{n:"Trent Grisham",pos:"OF",c:"USA"},{n:"Zach McKinstry",pos:"3B",c:"USA"},{n:"Moises Ballesteros",pos:"DH",c:"Venezuela"},{n:"Adolis Garcia",pos:"OF",c:"Cuba"},{n:"Logan Gilbert",pos:"SP",c:"USA"},{n:"Edwin Diaz",pos:"RP",c:"Puerto Rico"},{n:"Jesus Luzardo",pos:"SP",c:"Venezuela"},{n:"Robert Suarez",pos:"RP",c:"Venezuela"},{n:"Drew Rasmussen",pos:"SP",c:"USA"},{n:"Gavin Williams",pos:"SP",c:"USA"},{n:"Matthew Boyd",pos:"SP",c:"USA"},{n:"Bryce Miller",pos:"SP",c:"USA"}]},{name:"Jake's Scary Team",players:[{n:"Ben Rice",pos:"1B",c:"USA"},{n:"Nick Kurtz",pos:"1B",c:"USA"},{n:"Otto Lopez",pos:"SS",c:"Dominican Republic"},{n:"Javier Baez",pos:"SS",c:"Puerto Rico"},{n:"Trevor Story",pos:"SS",c:"USA"},{n:"Jackson Merrill",pos:"OF",c:"USA"},{n:"Kyle Stowers",pos:"OF",c:"USA"},{n:"Chandler Simpson",pos:"OF",c:"USA"},{n:"Kyle Schwarber",pos:"DH",c:"USA"},{n:"Emmanuel Rodriguez",pos:"OF",c:"Dominican Republic"},{n:"Travis Bazzana",pos:"2B",c:"Australia"},{n:"Giancarlo Stanton",pos:"DH",c:"USA"},{n:"Ethan Holliday",pos:"SS",c:"USA"},{n:"Max Muncy",pos:"3B",c:"USA"},{n:"J.T. Realmuto",pos:"C",c:"USA"},{n:"Aidan Miller",pos:"SS",c:"USA"},{n:"Garrett Crochet",pos:"SP",c:"USA"},{n:"Andres Munoz",pos:"RP",c:"Mexico"},{n:"Cade Smith",pos:"RP",c:"USA"},{n:"Abner Uribe",pos:"RP",c:"Dominican Republic"},{n:"Carlos Estevez",pos:"RP",c:"Dominican Republic"},{n:"Ranger Suarez",pos:"SP",c:"Venezuela"},{n:"Griffin Jax",pos:"RP",c:"USA"},{n:"Jason Adam",pos:"RP",c:"USA"},{n:"Andrew Painter",pos:"SP",c:"USA"},{n:"Carlos Lagrange",pos:"SP",c:"Netherlands"},{n:"Jack Flaherty",pos:"SP",c:"USA"},{n:"Zack Wheeler",pos:"SP",c:"USA"}]},{name:"Maggie Will Smith",players:[{n:"Will Smith",pos:"C",c:"USA"},{n:"Ryan O'Hearn",pos:"1B",c:"USA"},{n:"Ceddanne Rafaela",pos:"OF",c:"Curacao"},{n:"Maikel Garcia",pos:"3B",c:"Venezuela"},{n:"Bo Bichette",pos:"SS",c:"USA"},{n:"Roman Anthony",pos:"OF",c:"USA"},{n:"Sal Frelick",pos:"OF",c:"USA"},{n:"Wilyer Abreu",pos:"OF",c:"Venezuela"},{n:"Christian Yelich",pos:"DH",c:"USA"},{n:"Luis Arraez",pos:"1B",c:"Venezuela"},{n:"Walker Jenkins",pos:"OF",c:"USA"},{n:"Jorge Polanco",pos:"DH",c:"Dominican Republic"},{n:"Carson Benge",pos:"OF",c:"USA"},{n:"Rainiel Rodriguez",pos:"C",c:"Dominican Republic"},{n:"Dominic Canzone",pos:"OF",c:"USA"},{n:"Carlos Correa",pos:"SS",c:"Puerto Rico"},{n:"Paul Skenes",pos:"SP",c:"USA"},{n:"Logan Webb",pos:"SP",c:"USA"},{n:"Framber Valdez",pos:"SP",c:"Dominican Republic"},{n:"Trevor Megill",pos:"RP",c:"USA"},{n:"Cade Horton",pos:"SP",c:"USA"},{n:"Andrew Abbott",pos:"SP",c:"USA"},{n:"Kyle Finnegan",pos:"RP",c:"USA"},{n:"Josh Hader",pos:"RP",c:"USA"},{n:"Rhett Lowder",pos:"SP",c:"USA"},{n:"Cade Cavalli",pos:"SP",c:"USA"},{n:"Gerrit Cole",pos:"SP",c:"USA"},{n:"Corbin Burnes",pos:"SP",c:"USA"}]},{name:"Graham's Great Team",players:[{n:"Salvador Perez",pos:"C",c:"Venezuela"},{n:"Rafael Devers",pos:"DH",c:"Dominican Republic"},{n:"Bryson Stott",pos:"2B",c:"USA"},{n:"Austin Riley",pos:"3B",c:"USA"},{n:"Bobby Witt Jr.",pos:"SS",c:"USA"},{n:"Yordan Alvarez",pos:"DH",c:"Cuba"},{n:"Pete Crow-Armstrong",pos:"OF",c:"USA"},{n:"Oneil Cruz",pos:"OF",c:"Dominican Republic"},{n:"Seiya Suzuki",pos:"DH",c:"Japan"},{n:"Luis Robert Jr.",pos:"OF",c:"Cuba"},{n:"Brandon Nimmo",pos:"OF",c:"USA"},{n:"Willi Castro",pos:"OF",c:"Dominican Republic"},{n:"Daulton Varsho",pos:"OF",c:"USA"},{n:"Marcus Semien",pos:"2B",c:"USA"},{n:"Cole Ragans",pos:"SP",c:"USA"},{n:"George Kirby",pos:"SP",c:"USA"},{n:"Kevin Gausman",pos:"SP",c:"USA"},{n:"Ryan Helsley",pos:"RP",c:"USA"},{n:"Shota Imanaga",pos:"SP",c:"Japan"},{n:"Sandy Alcantara",pos:"SP",c:"Dominican Republic"},{n:"Brandon Woodruff",pos:"SP",c:"USA"},{n:"Aaron Nola",pos:"SP",c:"USA"},{n:"Kenley Jansen",pos:"RP",c:"Curacao"},{n:"Robbie Ray",pos:"SP",c:"USA"},{n:"Jeremiah Estrada",pos:"RP",c:"USA"},{n:"Ryan Walker",pos:"RP",c:"USA"}]},{name:"Dongle",players:[{n:"William Contreras",pos:"C",c:"Venezuela"},{n:"Michael Busch",pos:"1B",c:"USA"},{n:"JJ Wetherholt",pos:"SS",c:"USA"},{n:"Junior Caminero",pos:"3B",c:"Dominican Republic"},{n:"Geraldo Perdomo",pos:"SS",c:"Dominican Republic"},{n:"Corbin Carroll",pos:"OF",c:"USA"},{n:"Jarren Duran",pos:"OF",c:"USA"},{n:"Cody Bellinger",pos:"OF",c:"USA"},{n:"Luke Keaschall",pos:"2B",c:"USA"},{n:"Max Clark",pos:"OF",c:"USA"},{n:"Caleb Durbin",pos:"3B",c:"USA"},{n:"George Lombard Jr.",pos:"SS",c:"USA"},{n:"Justin Crawford",pos:"OF",c:"USA"},{n:"Charlie Condon",pos:"1B",c:"USA"},{n:"Evan Carter",pos:"OF",c:"USA"},{n:"Austin Wells",pos:"C",c:"USA"},{n:"Hunter Brown",pos:"SP",c:"USA"},{n:"Cam Schlittler",pos:"SP",c:"USA"},{n:"Michael King",pos:"SP",c:"USA"},{n:"MacKenzie Gore",pos:"SP",c:"USA"},{n:"Bryan Abreu",pos:"RP",c:"Dominican Republic"},{n:"Tatsuya Imai",pos:"SP",c:"Japan"},{n:"Jack Leiter",pos:"SP",c:"USA"},{n:"Ryan Weathers",pos:"SP",c:"USA"},{n:"Elmer Rodriguez",pos:"SP",c:"Dominican Republic"},{n:"Will Warren",pos:"SP",c:"USA"}]},{name:"Woo-hoo!",players:[{n:"Hunter Goodman",pos:"C",c:"USA"},{n:"Bryce Harper",pos:"1B",c:"USA"},{n:"Brice Turang",pos:"2B",c:"USA"},{n:"Jose Caballero",pos:"OF",c:"Dominican Republic"},{n:"Francisco Lindor",pos:"SS",c:"Puerto Rico"},{n:"Julio Rodriguez",pos:"OF",c:"Dominican Republic"},{n:"Michael Harris II",pos:"OF",c:"USA"},{n:"Mike Trout",pos:"DH",c:"USA"},{n:"Willy Adames",pos:"SS",c:"Dominican Republic"},{n:"Dansby Swanson",pos:"SS",c:"USA"},{n:"Luis Garcia Jr.",pos:"2B",c:"Venezuela"},{n:"Christian Walker",pos:"1B",c:"USA"},{n:"Spencer Steer",pos:"1B",c:"USA"},{n:"Colt Keith",pos:"DH",c:"USA"},{n:"Bryan Woo",pos:"SP",c:"USA"},{n:"Max Fried",pos:"SP",c:"USA"},{n:"Mason Miller",pos:"RP",c:"USA"},{n:"Nick Pivetta",pos:"SP",c:"Canada"},{n:"Noah Cameron",pos:"SP",c:"USA"},{n:"Raisel Iglesias",pos:"RP",c:"Cuba"},{n:"Emilio Pagan",pos:"RP",c:"USA"},{n:"Pete Fairbanks",pos:"RP",c:"USA"},{n:"Zac Gallen",pos:"SP",c:"USA"},{n:"Shane Bieber",pos:"SP",c:"USA"},{n:"Merrill Kelly",pos:"SP",c:"USA"},{n:"Bailey Ober",pos:"SP",c:"USA"}]},{name:"Boston Black Sox",players:[{n:"Samuel Basallo",pos:"C",c:"Dominican Republic"},{n:"Vladimir Guerrero Jr.",pos:"1B",c:"Dominican Republic"},{n:"Ernie Clement",pos:"3B",c:"USA"},{n:"Kazuma Okamoto",pos:"3B",c:"Japan"},{n:"Konnor Griffin",pos:"SS",c:"USA"},{n:"Aaron Judge",pos:"OF",c:"USA"},{n:"James Wood",pos:"OF",c:"USA"},{n:"Riley Greene",pos:"OF",c:"USA"},{n:"Corey Seager",pos:"SS",c:"USA"},{n:"Jac Caglianone",pos:"OF",c:"USA"},{n:"Spencer Jones",pos:"OF",c:"USA"},{n:"Bryce Eldridge",pos:"DH",c:"USA"},{n:"Marcelo Mayer",pos:"3B",c:"USA"},{n:"Leo De Vries",pos:"SS",c:"Curacao"},{n:"Sebastian Walcott",pos:"SS",c:"USA"},{n:"Joshua Baez",pos:"OF",c:"Dominican Republic"},{n:"Trey Yesavage",pos:"SP",c:"USA"},{n:"Jacob Misiorowski",pos:"SP",c:"USA"},{n:"Chase Burns",pos:"SP",c:"USA"},{n:"Connelly Early",pos:"SP",c:"USA"},{n:"Payton Tolle",pos:"SP",c:"USA"},{n:"Garrett Whitlock",pos:"RP",c:"USA"},{n:"Shane Smith",pos:"SP",c:"USA"},{n:"Kade Anderson",pos:"SP",c:"USA"},{n:"Thomas White",pos:"SP",c:"USA"},{n:"Jonah Tong",pos:"SP",c:"Canada"},{n:"Spencer Schwellenbach",pos:"SP",c:"USA"},{n:"Jared Jones",pos:"SP",c:"USA"}]}];
+
+// ============================================================
+// WARM EARTH-TONE COLORS
+// ============================================================
+const COLORS={
+  "USA":"#8b7355","Dominican Republic":"#c4713b","Venezuela":"#d4a843",
+  "Cuba":"#2a7a6d","Puerto Rico":"#b84233","Japan":"#9c4d4d","Mexico":"#6a994e",
+  "Colombia":"#c98f2e","Panama":"#3d6b5e","Canada":"#a63d2f","Curacao":"#4a7fa5",
+  "South Korea":"#7b5ea7","Aruba":"#c96b8b","Nicaragua":"#5a9cb5","Brazil":"#4a8c3f",
+  "Bahamas":"#3a8fa0","Australia":"#c4873b","Netherlands":"#d47b34","Taiwan":"#8b3a3a"
+};
+const getColor=c=>COLORS[c]||'#8a7f73';
+
+// ============================================================
+// BUILD CARDS
+// ============================================================
+const grid=document.getElementById('grid');
+let totalPlayers=0;
+const allCountries={};
+TEAMS.forEach(t=>t.players.forEach(p=>{totalPlayers++;allCountries[p.c]=(allCountries[p.c]||0)+1;}));
+
+document.getElementById('leagueStats').innerHTML=`
+  <div class="stat-item"><div class="num">${TEAMS.length}</div><div class="label">Teams</div></div>
+  <div class="stat-item"><div class="num">${totalPlayers}</div><div class="label">Players</div></div>
+  <div class="stat-item"><div class="num">${Object.keys(allCountries).length}</div><div class="label">Countries</div></div>`;
+
+TEAMS.forEach((team,idx)=>{
+  const cm={};
+  team.players.forEach(p=>cm[p.c]=(cm[p.c]||0)+1);
+  const sorted=Object.entries(cm).sort((a,b)=>b[1]-a[1]);
+
+  const card=document.createElement('div');
+  card.className='card';
+  card.style.transitionDelay=(idx*0.06)+'s';
+  card.innerHTML=`
+    <div class="team-name">${team.name}</div>
+    <div class="team-count">${team.players.length} players</div>
+    <div class="chart-container"><canvas id="chart-${idx}"></canvas></div>
+    <div class="legend-container" id="legend-${idx}"></div>`;
+  grid.appendChild(card);
+
+  const legendEl=card.querySelector(`#legend-${idx}`);
+  sorted.forEach(([country,count])=>{
+    const item=document.createElement('div');
+    item.className='legend-item';
+    item.innerHTML=`<div class="legend-dot" style="background:${getColor(country)}"></div>${country} <span class="legend-count">(${count})</span>`;
+    legendEl.appendChild(item);
+  });
+
+  const ctx=document.getElementById(`chart-${idx}`).getContext('2d');
+  new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:sorted.map(s=>s[0]),
+      datasets:[{
+        data:sorted.map(s=>s[1]),
+        backgroundColor:sorted.map(s=>getColor(s[0])),
+        borderColor:'#ffffff',
+        borderWidth:3,
+        hoverBorderColor:'#1a1714',
+        hoverBorderWidth:2,
+        hoverOffset:8,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      cutout:'45%',
+      animation:{animateRotate:true,duration:1000,delay:idx*100,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1a1714',
+          titleColor:'#faf6f1',
+          bodyColor:'#b5aa9e',
+          borderColor:'#3d352c',
+          borderWidth:1,
+          cornerRadius:8,
+          padding:12,
+          titleFont:{family:'EB Garamond',size:15,weight:500},
+          bodyFont:{family:'DM Sans',size:13},
+          callbacks:{
+            label:ctx=>{
+              const count=ctx.raw;
+              const pct=((count/team.players.length)*100).toFixed(0);
+              return ` ${count} player${count>1?'s':''} (${pct}%)`;
+            }
+          }
+        }
+      },
+      onClick:()=>showModal(team)
+    }
+  });
+
+  card.addEventListener('click',e=>{if(e.target.tagName!=='CANVAS')showModal(team);});
+});
+
+// ============================================================
+// SCROLL-TRIGGERED REVEALS
+// ============================================================
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
+
+document.querySelectorAll('.card').forEach(card=>observer.observe(card));
+
+// Also observe the bar section
+const barObserver=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('visible');
+      barObserver.unobserve(entry.target);
+      // Trigger bar animations
+      setTimeout(()=>{
+        document.querySelectorAll('.bar-fill').forEach(bar=>{
+          bar.style.width=bar.dataset.width;
+        });
+      },200);
+    }
+  });
+},{threshold:0.2});
+
+document.querySelectorAll('#barTitle, #leagueBars').forEach(el=>barObserver.observe(el));
+
+// ============================================================
+// LEAGUE-WIDE HORIZONTAL BARS
+// ============================================================
+const barsEl=document.getElementById('leagueBars');
+const sortedAll=Object.entries(allCountries).sort((a,b)=>b[1]-a[1]);
+const maxCount=sortedAll[0][1];
+
+sortedAll.forEach(([country,count])=>{
+  const pct=(count/maxCount)*100;
+  const row=document.createElement('div');
+  row.className='bar-row';
+  row.innerHTML=`
+    <div class="bar-label">${country}</div>
+    <div class="bar-track">
+      <div class="bar-fill" style="background:${getColor(country)};width:0" data-width="${pct}%"></div>
+    </div>
+    <div class="bar-value">${count}</div>`;
+  barsEl.appendChild(row);
+});
+
+// ============================================================
+// MODAL
+// ============================================================
+const overlay=document.getElementById('modalOverlay');
+const modalTitle=document.getElementById('modalTitle');
+const modalBody=document.getElementById('modalBody');
+
+function showModal(team){
+  modalTitle.textContent=team.name;
+  const byCountry={};
+  team.players.forEach(p=>{if(!byCountry[p.c])byCountry[p.c]=[];byCountry[p.c].push(p);});
+  const sorted=Object.entries(byCountry).sort((a,b)=>b[1].length-a[1].length);
+  modalBody.innerHTML=sorted.map(([country,players])=>`
+    <div class="modal-country">
+      <div class="modal-country-header">
+        <div class="modal-country-dot" style="background:${getColor(country)}"></div>
+        <span class="modal-country-name">${country}</span>
+        <span class="modal-country-count">${players.length} player${players.length>1?'s':''}</span>
+      </div>
+      ${players.map(p=>`<div class="modal-player">${p.n} <span class="pos">${p.pos}</span></div>`).join('')}
+    </div>`).join('');
+  overlay.classList.add('active');
+  document.body.style.overflow='hidden';
+}
+
+document.getElementById('modalClose').addEventListener('click',closeModal);
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+function closeModal(){
+  overlay.classList.remove('active');
+  document.body.style.overflow='';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — Fantasy League HQ</title>
+<link rel="stylesheet" href="/css/main.css">
+<style>
+  .error-page {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: calc(100vh - 64px);
+    text-align: center; padding: 40px 24px;
+  }
+  .error-code {
+    font-family: var(--font-display); font-size: 120px; font-weight: 400;
+    color: var(--border-dark); line-height: 1; letter-spacing: -0.04em;
+  }
+  .error-msg {
+    font-family: var(--font-display); font-style: italic;
+    font-size: 22px; color: var(--text-tertiary); margin: 20px 0 40px;
+  }
+  .error-link {
+    font-family: var(--font-body); font-weight: 500; font-size: 14px;
+    color: var(--accent-warm); text-decoration: none;
+    padding: 12px 28px; border: 1px solid rgba(196,113,59,0.25);
+    border-radius: 999px; transition: all 0.3s ease;
+  }
+  .error-link:hover { background: var(--accent-warm-light); border-color: var(--accent-warm); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="/" class="nav-brand"><span class="dot"></span> Fantasy League HQ</a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/nationalities">Nationalities</a></li>
+  </ul>
+</nav>
+<main class="error-page">
+  <div class="error-code">404</div>
+  <div class="error-msg">Struck out looking</div>
+  <a href="/" class="error-link">Back to home</a>
+</main>
+</body>
+</html>
